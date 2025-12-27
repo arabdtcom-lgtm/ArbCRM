@@ -218,14 +218,105 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     setActivities(prev => [newLog, ...prev].slice(0, 10));
   }, []);
 
+  const getDemoDocs = (verifiedCount: number = 0): ShipDoc[] => [
+    { id: '1', name: 'Bill of Lading', type: 'Core', status: verifiedCount > 0 ? 'Verified' : 'Pending', uploadDate: getTodayDate() },
+    { id: '2', name: 'Commercial Invoice', type: 'Core', status: verifiedCount > 1 ? 'Verified' : 'Pending', uploadDate: getTodayDate() },
+    { id: '3', name: 'Packing List', type: 'Core', status: verifiedCount > 2 ? 'Verified' : 'Missing', uploadDate: '-' },
+    { id: '4', name: 'Certificate of Origin', type: 'Core', status: verifiedCount > 3 ? 'Verified' : 'Missing', uploadDate: '-' },
+  ];
+
   useEffect(() => {
-    const savedLeads = JSON.parse(localStorage.getItem('amz_leads') || '[]');
-    const savedShipments = JSON.parse(localStorage.getItem('amz_shipments') || '[]');
     const savedReps = JSON.parse(localStorage.getItem('amz_sales_reps') || '["C.MOSTAFA", "RASHA", "AYA", "YOUNS"]');
+    setSalesReps(savedReps);
+
+    let savedLeads = JSON.parse(localStorage.getItem('amz_leads') || '[]');
+    let savedShipments = JSON.parse(localStorage.getItem('amz_shipments') || '[]');
+
+    // Seed Demo Data if empty
+    if (savedShipments.length === 0) {
+      savedShipments = [
+        {
+          id: 'demo-1',
+          trackingNumber: 'AMZ-9901',
+          customerName: 'Global Trade Corp',
+          bookingDate: getTodayDate(),
+          bookingNumber: 'BK-77221',
+          blNumber: 'MSCU-LON-001',
+          shippingLine: 'MSC',
+          shipmentMode: 'Sea',
+          shipmentType: 'FCL',
+          shipmentDirection: 'Export',
+          containerType: 'Dry',
+          containerSize: '40’',
+          origin: 'Egypt',
+          destination: 'Germany',
+          pol: 'Alexandria',
+          pod: 'Hamburg',
+          cargoDescription: 'Industrial Machinery Components',
+          loadingDate: getTodayDate(),
+          shippingDate: getTodayDate(),
+          eta: '2024-05-20',
+          currentLocation: 'Med Sea',
+          status: 'At Sea',
+          salesRep: 'C.MOSTAFA',
+          currency: 'USD',
+          inlandFreight: 450,
+          gensetCost: 0,
+          officialReceipts: 120,
+          overnightStay: 0,
+          otherExpenses: 50,
+          weightKg: 18500,
+          documents: getDemoDocs(2),
+          detailedCustomsStatus: 'Docs Received'
+        },
+        {
+          id: 'demo-2',
+          trackingNumber: 'AMZ-8854',
+          customerName: 'Nile Logistics Ltd',
+          bookingDate: getTodayDate(),
+          bookingNumber: 'BK-99100',
+          blNumber: 'CMA-ALX-442',
+          shippingLine: 'CMA',
+          shipmentMode: 'Sea',
+          shipmentType: 'FCL',
+          shipmentDirection: 'Export',
+          containerType: 'Reefer',
+          containerSize: '40’',
+          origin: 'Egypt',
+          destination: 'UAE',
+          pol: 'Port Said',
+          pod: 'Jebel Ali',
+          cargoDescription: 'Frozen Strawberries - IQF',
+          loadingDate: getTodayDate(),
+          shippingDate: getTodayDate(),
+          eta: '2024-05-10',
+          currentLocation: 'Suez Canal',
+          status: 'In Transit',
+          salesRep: 'RASHA',
+          currency: 'USD',
+          inlandFreight: 600,
+          gensetCost: 150,
+          officialReceipts: 200,
+          overnightStay: 0,
+          otherExpenses: 0,
+          weightKg: 22000,
+          documents: getDemoDocs(4),
+          detailedCustomsStatus: 'Released'
+        }
+      ];
+      localStorage.setItem('amz_shipments', JSON.stringify(savedShipments));
+    }
+
+    if (savedLeads.length === 0) {
+      savedLeads = [
+        { id: 'l1', name: 'Mohamed Ahmed', phone: '0100223344', companyName: 'Nile Exports', cargoType: 'Dry', route: 'ALX -> HAM', status: 'Won', date: getTodayDate(), salesName: 'C.MOSTAFA', shipmentTrackingNumber: 'AMZ-9901' },
+        { id: 'l2', name: 'Sara Kamel', phone: '0122334455', companyName: 'Kamel Fruits', cargoType: 'Refrigerated', route: 'PSD -> DXB', status: 'Won', date: getTodayDate(), salesName: 'RASHA', shipmentTrackingNumber: 'AMZ-8854' }
+      ];
+      localStorage.setItem('amz_leads', JSON.stringify(savedLeads));
+    }
     
     setLeads(savedLeads);
     setShipments(savedShipments);
-    setSalesReps(savedReps);
 
     const loadBrief = async () => {
       if (savedLeads.length || savedShipments.length) {
@@ -345,7 +436,6 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         return { ...s, documents: updatedDocs };
       });
       localStorage.setItem('amz_shipments', JSON.stringify(next));
-      // Sync selectedShipment if open
       if (selectedShipment?.id === shipmentId) {
         setSelectedShipment(next.find(x => x.id === shipmentId) || null);
       }
@@ -356,11 +446,7 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const handleSaveLead = (e: React.FormEvent) => {
     e.preventDefault();
     const leadData = editingLeadValues as Lead;
-    
-    // Ensure default salesName if not explicitly set
-    if (!leadData.salesName) {
-      leadData.salesName = salesReps[0] || 'ADMIN';
-    }
+    if (!leadData.salesName) leadData.salesName = salesReps[0] || 'ADMIN';
 
     if (isEditingLead) {
       const nextLeads = leads.map(l => l.id === leadData.id ? leadData : l);
@@ -386,14 +472,8 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     e.preventDefault();
     const shipmentData = editingShipmentValues as Shipment;
     
-    // Ensure default docs if new
     if (!isEditingShipment) {
-      shipmentData.documents = [
-        { id: '1', name: 'Bill of Lading', type: 'Core', status: 'Missing', uploadDate: '-' },
-        { id: '2', name: 'Commercial Invoice', type: 'Core', status: 'Missing', uploadDate: '-' },
-        { id: '3', name: 'Packing List', type: 'Core', status: 'Missing', uploadDate: '-' },
-        { id: '4', name: 'Certificate of Origin', type: 'Core', status: 'Missing', uploadDate: '-' },
-      ];
+      shipmentData.documents = getDemoDocs(0);
     }
 
     if (isEditingShipment) {
@@ -430,12 +510,15 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         trackingNumber: parsedData.trackingNumber || `AMZ-${Math.floor(1000 + Math.random() * 9000)}`,
         customerName: parsedData.customerName || '',
         blNumber: parsedData.blNumber || '',
-        // Use normalized value from strict AI output
         shippingLine: parsedData.shippingLine?.value || OFFICIAL_SHIPPING_LINES[0],
         origin: parsedData.origin || '',
         destination: parsedData.destination || '',
         cargoDescription: parsedData.cargoDescription || '',
         inlandFreight: parsedData.inlandFreight || 0,
+        gensetCost: parsedData.gensetCost || 0,
+        officialReceipts: parsedData.officialReceipts || 0,
+        overnightStay: parsedData.overnightStay || 0,
+        otherExpenses: parsedData.otherExpenses || 0,
         currency: parsedData.currency === 'EGP' ? 'EGP' : 'USD',
         status: 'Pending',
         detailedCustomsStatus: 'Not Started',
@@ -748,7 +831,7 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                </div>
                <div className="flex gap-4">
                   <button onClick={() => setIsSmartImportOpen(true)} className="bg-slate-800 text-slate-300 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">AI Import</button>
-                  <button onClick={() => { setIsAddingShipment(true); setEditingShipmentValues({ salesRep: salesReps[0], currency: 'USD', inlandFreight: 0, gensetCost: 0, officialReceipts: 0, overnightStay: 0, otherExpenses: 0 }); }} className="bg-blue-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl">Dispatch Freight</button>
+                  <button onClick={() => { setIsAddingShipment(true); setEditingShipmentValues({ salesRep: salesReps[0], currency: 'USD', inlandFreight: 0, gensetCost: 0, officialReceipts: 0, overnightStay: 0, otherExpenses: 0, documents: getDemoDocs(0) }); }} className="bg-blue-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl">Dispatch Freight</button>
                </div>
             </div>
 
@@ -803,8 +886,8 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                           </td>
                           <td className="px-10 py-8 text-right">
                              <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100">
-                                <button onClick={(e) => { e.stopPropagation(); setSelectedShipment(s); setIsEditingShipment(true); setEditingShipmentValues(s); }} className="w-11 h-11 rounded-xl bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white flex items-center justify-center"><i className="fas fa-pencil text-xs"></i></button>
-                                <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete?')) { syncData(undefined, shipments.filter(x => x.id !== s.id)); showToast('Deleted'); } }} className="w-11 h-11 rounded-xl bg-slate-800 text-slate-400 hover:bg-rose-600 hover:text-white flex items-center justify-center"><i className="fas fa-trash-can text-xs"></i></button>
+                                <button onClick={(e) => { e.stopPropagation(); setSelectedShipment(s); setIsEditingShipment(true); setEditingShipmentValues(s); }} className="w-11 h-11 rounded-xl bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all"><i className="fas fa-pencil text-xs"></i></button>
+                                <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete?')) { syncData(undefined, shipments.filter(x => x.id !== s.id)); showToast('Deleted'); } }} className="w-11 h-11 rounded-xl bg-slate-800 text-slate-400 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-all"><i className="fas fa-trash-can text-xs"></i></button>
                              </div>
                           </td>
                        </tr>
@@ -821,22 +904,6 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                <div>
                   <h2 className="text-3xl font-black text-white tracking-tight uppercase">Customs Desk</h2>
                   <p className="text-[10px] text-slate-500 font-black mt-2 uppercase tracking-widest">Manage Brokerage & Declaration Workflow</p>
-               </div>
-               <div className="flex gap-4">
-                  <div className="flex bg-[#020617] p-1.5 rounded-2xl border border-slate-800">
-                    <button 
-                      onClick={() => setCustomsPriorityFilter('All')}
-                      className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${customsPriorityFilter === 'All' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                      All Cargo
-                    </button>
-                    <button 
-                      onClick={() => setCustomsPriorityFilter('Priority')}
-                      className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${customsPriorityFilter === 'Priority' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                      Needs Action
-                    </button>
-                  </div>
                </div>
             </div>
 
@@ -907,48 +974,30 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <header className="flex justify-between items-center bg-slate-900/40 backdrop-blur-md p-10 rounded-[2.5rem] border border-slate-800">
               <div>
                 <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">Human Assets</h2>
-                <div className="flex items-center gap-3 mt-4">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{salesReps.length} Registered Sales Personnel</span>
-                </div>
               </div>
-              <button 
-                onClick={() => setIsAddingRep(true)}
-                className="bg-blue-600 text-white px-10 py-5 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95 flex items-center gap-3"
-              >
-                <i className="fas fa-user-plus"></i>
-                Register New Asset
+              <button onClick={() => setIsAddingRep(true)} className="bg-blue-600 text-white px-10 py-5 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl active:scale-95 flex items-center gap-3">
+                <i className="fas fa-user-plus"></i> Register Asset
               </button>
             </header>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {salesReps.map((rep, idx) => (
-                <div key={idx} className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800 hover:border-blue-500/30 transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-20 h-20 rounded-[2rem] bg-slate-800 border border-slate-700 flex items-center justify-center text-3xl text-blue-500 mb-6 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                <div key={idx} className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800 hover:border-blue-500/30 transition-all group relative">
+                   <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 rounded-[2rem] bg-slate-800 border border-slate-700 flex items-center justify-center text-3xl text-blue-500 mb-6">
                       <i className="fas fa-id-badge"></i>
                     </div>
-                    <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2 leading-none">{rep}</h3>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Senior Sales Asset</p>
-                    
+                    <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2">{rep}</h3>
                     <div className="w-full grid grid-cols-2 gap-4 border-t border-slate-800 pt-6">
-                      <div className="text-center">
-                        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Active Leads</div>
+                       <div className="text-center">
+                        <div className="text-[9px] text-slate-600 uppercase font-black">Active</div>
                         <div className="text-lg font-black text-white">{leads.filter(l => l.salesName === rep).length}</div>
-                      </div>
-                      <div className="text-center border-l border-slate-800">
-                        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Closed Won</div>
+                       </div>
+                       <div className="text-center border-l border-slate-800">
+                        <div className="text-[9px] text-slate-600 uppercase font-black">Won</div>
                         <div className="text-lg font-black text-emerald-500">{leads.filter(l => l.salesName === rep && l.status === 'Won').length}</div>
-                      </div>
+                       </div>
                     </div>
-                  </div>
-                  <button 
-                    onClick={() => { if(window.confirm('Decommission asset?')) { syncData(undefined, undefined, salesReps.filter(r => r !== rep)); showToast('Asset Decommissioned'); }}}
-                    className="absolute top-4 right-4 text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <i className="fas fa-trash-alt text-xs"></i>
-                  </button>
+                   </div>
                 </div>
               ))}
             </div>
@@ -961,7 +1010,7 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
              <div className="bg-[#0f172a] w-full max-w-4xl rounded-[3rem] border border-slate-800 p-12 relative my-auto shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
                 <header className="flex justify-between items-start mb-12">
                    <div className="flex items-center gap-8">
-                      <div className="w-20 h-20 rounded-3xl bg-slate-800 flex items-center justify-center text-blue-500 text-4xl shadow-inner border border-slate-700">
+                      <div className="w-20 h-20 rounded-3xl bg-slate-800 flex items-center justify-center text-blue-500 text-4xl border border-slate-700">
                          <i className="fas fa-user-tie"></i>
                       </div>
                       <div>
@@ -973,19 +1022,10 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       </div>
                    </div>
                    <div className="flex gap-4">
-                      <button 
-                         onClick={() => { setIsEditingLead(true); setEditingLeadValues(selectedLead); }}
-                         className="w-14 h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center shadow-lg shadow-blue-600/20"
-                         title="Edit Lead"
-                      >
-                         <i className="fas fa-pencil text-lg"></i>
-                      </button>
-                      <button onClick={() => setSelectedLead(null)} className="w-14 h-14 rounded-2xl bg-slate-800/50 text-slate-500 hover:text-red-500 transition-all flex items-center justify-center">
-                         <i className="fas fa-times text-xl"></i>
-                      </button>
+                      <button onClick={() => { setIsEditingLead(true); setEditingLeadValues(selectedLead); }} className="w-14 h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center shadow-lg"><i className="fas fa-pencil text-lg"></i></button>
+                      <button onClick={() => setSelectedLead(null)} className="w-14 h-14 rounded-2xl bg-slate-800/50 text-slate-500 hover:text-red-500 transition-all flex items-center justify-center"><i className="fas fa-times text-xl"></i></button>
                    </div>
                 </header>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                    <div className="space-y-8">
                       <div className="bg-slate-900/50 p-8 rounded-[2rem] border border-slate-800">
@@ -995,73 +1035,14 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Company Entity</span>
                                <span className="text-slate-200 font-bold">{selectedLead.companyName || 'Private Asset'}</span>
                             </div>
-                            <div className="flex flex-col">
-                               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Assigned Sales Owner</span>
-                               <span className="text-slate-200 font-bold">{selectedLead.salesName}</span>
-                            </div>
                          </div>
                       </div>
-
-                      <div className="bg-slate-900/50 p-8 rounded-[2rem] border border-slate-800">
-                         <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6">Direct Channels</h4>
-                         <div className="space-y-4">
-                            <div className="flex items-center gap-4 p-3 bg-slate-950/30 rounded-xl border border-slate-800/50">
-                               <i className="fas fa-phone text-blue-500 w-4 text-center"></i>
-                               <span className="text-xs font-bold text-slate-300">{selectedLead.phone}</span>
-                            </div>
-                            {selectedLead.email && (
-                              <div className="flex items-center gap-4 p-3 bg-slate-950/30 rounded-xl border border-slate-800/50">
-                                 <i className="fas fa-envelope text-blue-500 w-4 text-center"></i>
-                                 <span className="text-xs font-bold text-slate-300">{selectedLead.email}</span>
-                              </div>
-                            )}
-                            {selectedLead.address && (
-                              <div className="flex items-center gap-4 p-3 bg-slate-950/30 rounded-xl border border-slate-800/50">
-                                 <i className="fas fa-map-location text-blue-500 w-4 text-center"></i>
-                                 <span className="text-xs font-bold text-slate-300">{selectedLead.address}</span>
-                              </div>
-                            )}
-                         </div>
-                      </div>
-
-                      <div className="bg-slate-900/50 p-8 rounded-[2rem] border border-slate-800">
-                         <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6">Digital Presence</h4>
-                         <div className="space-y-4">
-                            {selectedLead.website && (
-                              <a href={selectedLead.website.startsWith('http') ? selectedLead.website : `https://${selectedLead.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-3 bg-slate-950/30 rounded-xl border border-slate-800/50 hover:border-blue-500/50 transition-all group">
-                                 <i className="fas fa-globe text-emerald-500 w-4 text-center"></i>
-                                 <span className="text-xs font-bold text-slate-300 group-hover:text-blue-400 truncate">{selectedLead.website}</span>
-                              </a>
-                            )}
-                            {selectedLead.facebook && (
-                              <a href={selectedLead.facebook.startsWith('http') ? selectedLead.facebook : `https://${selectedLead.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-3 bg-slate-950/30 rounded-xl border border-slate-800/50 hover:border-blue-500/50 transition-all group">
-                                 <i className="fab fa-facebook text-blue-600 w-4 text-center"></i>
-                                 <span className="text-xs font-bold text-slate-300 group-hover:text-blue-400 truncate">{selectedLead.facebook}</span>
-                              </a>
-                            )}
-                            {selectedLead.linkedin && (
-                              <a href={selectedLead.linkedin.startsWith('http') ? selectedLead.linkedin : `https://${selectedLead.linkedin}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-3 bg-slate-950/30 rounded-xl border border-slate-800/50 hover:border-blue-500/50 transition-all group">
-                                 <i className="fab fa-linkedin text-sky-500 w-4 text-center"></i>
-                                 <span className="text-xs font-bold text-slate-300 group-hover:text-blue-400 truncate">{selectedLead.linkedin}</span>
-                              </a>
-                            )}
-                            {!selectedLead.website && !selectedLead.facebook && !selectedLead.linkedin && (
-                              <p className="text-[10px] text-slate-600 italic px-2">No digital identifiers provided.</p>
-                            )}
-                         </div>
-                      </div>
-                   </div>
-
-                   <div className="space-y-8">
                       <div className="bg-slate-900/50 p-8 rounded-[2rem] border border-slate-800">
                          <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6">Requirements & Routing</h4>
                          <div className="space-y-5">
                             <div className="flex flex-col">
                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cargo Class</span>
-                               <div className="flex items-center gap-3">
-                                  <span className={`w-2 h-2 rounded-full ${selectedLead.cargoType === 'Hazardous' ? 'bg-red-500' : 'bg-blue-500'}`}></span>
-                                  <span className="text-slate-200 font-bold">{selectedLead.cargoType}</span>
-                               </div>
+                               <span className="text-slate-200 font-bold">{selectedLead.cargoType}</span>
                             </div>
                             <div className="flex flex-col">
                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Target Route</span>
@@ -1069,129 +1050,190 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             </div>
                          </div>
                       </div>
-
+                   </div>
+                   <div className="space-y-8">
                       <div className="bg-blue-600/5 p-8 rounded-[2rem] border border-blue-500/20">
-                         <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-6">Lifecycle Integration</h4>
+                         <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-6">Linked Assets</h4>
                          <div className="space-y-4">
-                            <div className="flex flex-col gap-2">
-                               <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Linked Shipment Registry</span>
-                               {selectedLead.shipmentTrackingNumber ? (
-                                 <button 
-                                   onClick={() => jumpToShipment(selectedLead.shipmentTrackingNumber!)}
-                                   className="w-full p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center group hover:border-blue-500/50 transition-all"
-                                 >
-                                    <span className="font-mono font-black text-blue-400">{selectedLead.shipmentTrackingNumber}</span>
-                                    <i className="fas fa-external-link-alt text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                                 </button>
-                               ) : (
-                                 <span className="text-[10px] text-slate-700 italic font-black uppercase tracking-widest py-2">No linked assets found.</span>
-                               )}
+                            {selectedLead.shipmentTrackingNumber ? (
+                              <button onClick={() => jumpToShipment(selectedLead.shipmentTrackingNumber!)} className="w-full p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center group hover:border-blue-500/50 transition-all">
+                                <span className="font-mono font-black text-blue-400">{selectedLead.shipmentTrackingNumber}</span>
+                                <i className="fas fa-external-link-alt text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                              </button>
+                            ) : <span className="text-slate-600 italic text-xs">No shipment linked.</span>}
+                         </div>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* Lead/Shipment Forms (Simplified versions based on existing logic) */}
+        {(isAddingLead || isEditingLead) && (
+          <div className="fixed inset-0 z-[180] bg-[#020617]/95 flex items-center justify-center p-6 backdrop-blur-xl overflow-y-auto">
+            <div className="bg-[#0f172a] w-full max-w-2xl rounded-[3rem] border border-slate-800 p-12 shadow-2xl my-auto animate-scale-in">
+              <header className="flex justify-between items-center mb-10">
+                <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Lead Manifest</h3>
+                <button onClick={() => { setIsAddingLead(false); setIsEditingLead(false); }}><i className="fas fa-times text-2xl"></i></button>
+              </header>
+              <form onSubmit={handleSaveLead} className="space-y-6">
+                <input required value={editingLeadValues.name || ''} onChange={e => setEditingLeadValues({...editingLeadValues, name: e.target.value})} placeholder="Customer Name" className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white" />
+                <input required value={editingLeadValues.phone || ''} onChange={e => setEditingLeadValues({...editingLeadValues, phone: e.target.value})} placeholder="Phone" className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white" />
+                <select value={editingLeadValues.salesName || (salesReps[0] || '')} onChange={e => setEditingLeadValues({...editingLeadValues, salesName: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white">
+                  {salesReps.map(r => <option key={r} value={r} className="bg-[#0f172a]">{r}</option>)}
+                </select>
+                <button type="submit" className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all">Submit Asset Entry</button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Shipment Detail View Modal (Full Details) */}
+        {selectedShipment && !isEditingShipment && (
+          <div className="fixed inset-0 z-[150] bg-[#020617]/90 backdrop-blur-2xl flex items-center justify-center p-6 overflow-y-auto" onClick={() => setSelectedShipment(null)}>
+             <div className="bg-[#0f172a] w-full max-w-6xl rounded-[3rem] border border-slate-800 p-12 relative my-auto shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+                <header className="flex justify-between items-start mb-12">
+                   <div className="flex items-center gap-8">
+                      <div className="w-24 h-24 rounded-3xl bg-blue-600 flex items-center justify-center text-white text-5xl shadow-2xl">
+                         <i className={`fas ${getStatusIcon(selectedShipment.status)}`}></i>
+                      </div>
+                      <div>
+                         <h3 className="text-5xl font-black text-white tracking-tighter mb-4 leading-none">{selectedShipment.trackingNumber}</h3>
+                         <div className="flex flex-wrap items-center gap-6">
+                            <span className="text-slate-500 font-black text-xs uppercase tracking-widest">Client: <span className="text-slate-200">{selectedShipment.customerName}</span></span>
+                            <InteractiveShipmentStatusBadge status={selectedShipment.status} onChange={s => handleUpdateShipmentStatus(selectedShipment.id, s)} />
+                         </div>
+                      </div>
+                   </div>
+                   <div className="flex gap-4">
+                      <button onClick={() => { setIsEditingShipment(true); setEditingShipmentValues(selectedShipment); }} className="w-14 h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center shadow-lg"><i className="fas fa-pencil text-lg"></i></button>
+                      <button onClick={() => setSelectedShipment(null)} className="w-14 h-14 rounded-2xl bg-slate-800/50 text-slate-500 hover:text-red-500 transition-all flex items-center justify-center"><i className="fas fa-times text-xl"></i></button>
+                   </div>
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                   <div className="lg:col-span-3 space-y-8">
+                      <div className="bg-slate-900/50 p-10 rounded-[2.5rem] border border-slate-800">
+                         <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-10">Freight Lifecycle Timeline</h4>
+                         {renderStatusTimeline(selectedShipment.status)}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
+                           <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6 flex items-center gap-3">
+                              <i className="fas fa-file-invoice text-blue-500"></i> Manifest Specs
+                           </h4>
+                           <div className="space-y-4 text-xs">
+                              <div className="flex justify-between"><span className="text-slate-500">Line</span><span className="text-slate-200 font-black">{selectedShipment.shippingLine}</span></div>
+                              <div className="flex justify-between"><span className="text-slate-500">B/L No.</span><span className="text-blue-400 font-mono font-black">{selectedShipment.blNumber}</span></div>
+                              <div className="flex justify-between"><span className="text-slate-500">Weight</span><span className="text-emerald-400 font-black">{selectedShipment.weightKg} KG</span></div>
+                              <div className="flex justify-between"><span className="text-slate-500">Equipment</span><span className="text-slate-200 font-bold">{selectedShipment.containerSize} {selectedShipment.containerType}</span></div>
+                           </div>
+                        </div>
+
+                        {/* Inland Transportation Cost Details Section */}
+                        <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800 border-l-4 border-l-emerald-500 shadow-xl">
+                          <div className="flex justify-between items-center mb-8">
+                            <h4 className="text-[11px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-3">
+                                <i className="fas fa-money-bill-transfer"></i> Inland Transportation Cost Details
+                            </h4>
+                            <div className="bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/20">
+                              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block leading-none mb-1">Total Inland Cost</span>
+                              <span className="text-lg font-black text-emerald-400">
+                                  {selectedShipment.currency === 'USD' ? '$' : 'EGP'}
+                                  {((selectedShipment.inlandFreight || 0) + 
+                                    (selectedShipment.gensetCost || 0) + 
+                                    (selectedShipment.officialReceipts || 0) + 
+                                    (selectedShipment.overnightStay || 0) + 
+                                    (selectedShipment.otherExpenses || 0)).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-500 font-bold">Inland Freight</span>
+                                <span className="text-slate-200 font-black">{selectedShipment.inlandFreight?.toLocaleString() || '0'} {selectedShipment.currency}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-500 font-bold">Genset Cost</span>
+                                <span className="text-slate-200 font-black">{selectedShipment.gensetCost?.toLocaleString() || '0'} {selectedShipment.currency}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-500 font-bold">Official Receipts Cost</span>
+                                <span className="text-slate-200 font-black">{selectedShipment.officialReceipts?.toLocaleString() || '0'} {selectedShipment.currency}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-500 font-bold">Overnight Stay Cost</span>
+                                <span className="text-slate-200 font-black">{selectedShipment.overnightStay?.toLocaleString() || '0'} {selectedShipment.currency}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs col-span-2 border-t border-slate-800 pt-2">
+                                <span className="text-slate-500 font-bold">Other Expenses</span>
+                                <span className="text-slate-200 font-black">{selectedShipment.otherExpenses?.toLocaleString() || '0'} {selectedShipment.currency}</span>
+                              </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Document Control Panel */}
+                      <div className="bg-slate-900/50 p-10 rounded-[2.5rem] border border-slate-800 shadow-lg">
+                        <div className="flex justify-between items-center mb-8">
+                          <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Cargo Document Control Board</h4>
+                          <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 animate-pulse">Operational Integrity Check</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                           {(selectedShipment.documents || []).map(doc => (
+                             <button 
+                                key={doc.id}
+                                onClick={() => toggleDocumentStatus(selectedShipment.id, doc.id)}
+                                className={`p-6 rounded-[1.5rem] border-2 transition-all flex flex-col items-center text-center gap-4 active:scale-95 group hover:shadow-xl ${
+                                  doc.status === 'Verified' ? 'bg-emerald-500/10 border-emerald-500/30' :
+                                  doc.status === 'Pending' ? 'bg-amber-500/10 border-amber-500/30' :
+                                  'bg-slate-800/40 border-slate-700/50'
+                                }`}
+                             >
+                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-all duration-300 ${
+                                 doc.status === 'Verified' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
+                                 doc.status === 'Pending' ? 'bg-amber-500 text-white shadow-amber-500/20' :
+                                 'bg-slate-700 text-slate-400'
+                               }`}>
+                                 <i className={`fas ${doc.status === 'Verified' ? 'fa-check-double' : doc.status === 'Pending' ? 'fa-clock' : 'fa-file-circle-exclamation'}`}></i>
+                               </div>
+                               <div>
+                                 <div className={`text-[10px] font-black uppercase tracking-tight leading-tight mb-1 ${doc.status === 'Verified' ? 'text-emerald-400' : 'text-slate-300'}`}>{doc.name}</div>
+                                 <div className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                                    doc.status === 'Verified' ? 'bg-emerald-500/20 text-emerald-500' : 
+                                    doc.status === 'Pending' ? 'bg-amber-500/20 text-amber-500' : 
+                                    'bg-slate-900 text-slate-600'
+                                 }`}>{doc.status}</div>
+                               </div>
+                             </button>
+                           ))}
+                        </div>
+                      </div>
+                   </div>
+
+                   <div className="space-y-8">
+                      <div className="bg-blue-600/5 p-8 rounded-[2.5rem] border border-blue-500/20">
+                         <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-6">Cargo Detail</h4>
+                         <p className="text-sm font-bold text-slate-200 leading-relaxed">{selectedShipment.cargoDescription}</p>
+                      </div>
+                      <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
+                         <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6">Logistics Intel</h4>
+                         <div className="space-y-4 text-[10px] font-black uppercase">
+                            <div className="flex flex-col gap-1">
+                               <span className="text-slate-500">Route</span>
+                               <span className="text-blue-400">{selectedShipment.origin} ➔ {selectedShipment.destination}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                               <span className="text-slate-500">ETA</span>
+                               <span className="text-white">{selectedShipment.eta}</span>
                             </div>
                          </div>
                       </div>
                    </div>
                 </div>
-
-                {selectedLead.notes && (
-                  <div className="mt-10 bg-slate-900/50 p-8 rounded-[2rem] border border-slate-800">
-                     <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Strategic Operational Notes</h4>
-                     <p className="text-sm text-slate-400 italic leading-relaxed">"{selectedLead.notes}"</p>
-                  </div>
-                )}
              </div>
-          </div>
-        )}
-
-        {/* Lead Registration/Edit Modal */}
-        {(isAddingLead || isEditingLead) && (
-          <div className="fixed inset-0 z-[180] bg-[#020617]/95 flex items-center justify-center p-6 backdrop-blur-xl overflow-y-auto">
-            <div className="bg-[#0f172a] w-full max-w-4xl rounded-[3rem] border border-slate-800 p-12 shadow-2xl my-auto animate-scale-in">
-              <div className="flex justify-between items-center mb-10">
-                <h3 className="text-3xl font-black text-white uppercase tracking-tighter">
-                  {isEditingLead ? 'Modify Prospect Manifest' : 'Register Strategic Prospect'}
-                </h3>
-                <button onClick={() => { setIsAddingLead(false); setIsEditingLead(false); }} className="text-slate-500 hover:text-white transition-colors"><i className="fas fa-times text-2xl"></i></button>
-              </div>
-              <form onSubmit={handleSaveLead} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Customer Legal Name</label>
-                    <input required value={editingLeadValues.name || ''} onChange={e => setEditingLeadValues({...editingLeadValues, name: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Contact Phone</label>
-                    <input required value={editingLeadValues.phone || ''} onChange={e => setEditingLeadValues({...editingLeadValues, phone: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Email Address</label>
-                    <input type="email" value={editingLeadValues.email || ''} onChange={e => setEditingLeadValues({...editingLeadValues, email: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Company / Entity Name</label>
-                    <input value={editingLeadValues.companyName || ''} onChange={e => setEditingLeadValues({...editingLeadValues, companyName: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Assoc. Shipment Tracking ID</label>
-                    <input value={editingLeadValues.shipmentTrackingNumber || ''} onChange={e => setEditingLeadValues({...editingLeadValues, shipmentTrackingNumber: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-blue-400 font-mono text-sm outline-none focus:border-blue-500 transition-all" placeholder="e.g. AMZ-1234" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Website URL</label>
-                    <input value={editingLeadValues.website || ''} onChange={e => setEditingLeadValues({...editingLeadValues, website: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" placeholder="www.company.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Facebook Profile</label>
-                    <input value={editingLeadValues.facebook || ''} onChange={e => setEditingLeadValues({...editingLeadValues, facebook: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" placeholder="facebook.com/user" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">LinkedIn Profile</label>
-                    <input value={editingLeadValues.linkedin || ''} onChange={e => setEditingLeadValues({...editingLeadValues, linkedin: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" placeholder="linkedin.com/in/user" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Cargo Classification</label>
-                    <select value={editingLeadValues.cargoType || 'Dry'} onChange={e => setEditingLeadValues({...editingLeadValues, cargoType: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all">
-                      {['Dry', 'Refrigerated', 'Frozen', 'Hazardous'].map(t => <option key={t} value={t} className="bg-[#0f172a]">{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Target Operational Route</label>
-                    <input value={editingLeadValues.route || ''} onChange={e => setEditingLeadValues({...editingLeadValues, route: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all" placeholder="Alexandria -> Hamburg" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sales Representative</label>
-                    <select 
-                      value={editingLeadValues.salesName || (salesReps.length > 0 ? salesReps[0] : '')} 
-                      onChange={e => setEditingLeadValues({...editingLeadValues, salesName: e.target.value})} 
-                      className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 transition-all"
-                    >
-                      {salesReps.map(r => <option key={r} value={r} className="bg-[#0f172a]">{r}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Strategic Operational Notes</label>
-                  <textarea 
-                    value={editingLeadValues.notes || ''} 
-                    onChange={e => setEditingLeadValues({...editingLeadValues, notes: e.target.value})}
-                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none h-32 resize-none focus:border-blue-500 transition-all"
-                    placeholder="Enter detailed background, client preferences, or internal context..."
-                  />
-                </div>
-
-                <button type="submit" className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95">
-                  {isEditingLead ? 'Synchronize Record Updates' : 'Authorize Prospect Entry'}
-                </button>
-              </form>
-            </div>
           </div>
         )}
 
@@ -1206,6 +1248,7 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <button onClick={() => { setIsAddingShipment(false); setIsEditingShipment(false); }} className="text-slate-500 hover:text-white transition-colors"><i className="fas fa-times text-2xl"></i></button>
               </div>
               <form onSubmit={handleSaveShipment} className="space-y-8">
+                {/* Standard Header Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Tracking Number</label>
@@ -1225,26 +1268,7 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">B/L Number</label>
-                    <input value={editingShipmentValues.blNumber || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, blNumber: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none font-mono" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Shipping Line</label>
-                    <select value={editingShipmentValues.shippingLine || OFFICIAL_SHIPPING_LINES[0]} onChange={e => setEditingShipmentValues({...editingShipmentValues, shippingLine: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none">
-                      {OFFICIAL_SHIPPING_LINES.map(l => <option key={l} value={l} className="bg-[#0f172a]">{l}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Direction</label>
-                    <select value={editingShipmentValues.shipmentDirection || 'Export'} onChange={e => setEditingShipmentValues({...editingShipmentValues, shipmentDirection: e.target.value as any})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none">
-                      <option value="Export" className="bg-[#0f172a]">Export</option>
-                      <option value="Import" className="bg-[#0f172a]">Import</option>
-                    </select>
-                  </div>
-                </div>
-
+                {/* Inland Logistics & Financials */}
                 <div className="border-t border-slate-800 pt-8 space-y-6">
                   <div className="flex items-center gap-3 text-emerald-500 font-black text-[10px] uppercase tracking-widest">
                     <i className="fas fa-truck-fast"></i> Inland Logistics & Financials
@@ -1258,7 +1282,7 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Freight Cost</label>
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Inland Freight</label>
                       <input type="number" value={editingShipmentValues.inlandFreight || 0} onChange={e => setEditingShipmentValues({...editingShipmentValues, inlandFreight: parseFloat(e.target.value)})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-white outline-none" />
                     </div>
                     <div className="space-y-2">
@@ -1266,11 +1290,11 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       <input type="number" value={editingShipmentValues.gensetCost || 0} onChange={e => setEditingShipmentValues({...editingShipmentValues, gensetCost: parseFloat(e.target.value)})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-white outline-none" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Official Rcpt</label>
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Official Receipts Cost</label>
                       <input type="number" value={editingShipmentValues.officialReceipts || 0} onChange={e => setEditingShipmentValues({...editingShipmentValues, officialReceipts: parseFloat(e.target.value)})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-white outline-none" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Overnight Stay</label>
+                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Overnight Stay Cost</label>
                       <input type="number" value={editingShipmentValues.overnightStay || 0} onChange={e => setEditingShipmentValues({...editingShipmentValues, overnightStay: parseFloat(e.target.value)})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-white outline-none" />
                     </div>
                     <div className="space-y-2">
@@ -1278,20 +1302,12 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       <input type="number" value={editingShipmentValues.otherExpenses || 0} onChange={e => setEditingShipmentValues({...editingShipmentValues, otherExpenses: parseFloat(e.target.value)})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-white outline-none" />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Inland Financial Notes</label>
-                    <textarea 
-                      value={editingShipmentValues.otherExpensesNotes || ''} 
-                      onChange={e => setEditingShipmentValues({...editingShipmentValues, otherExpensesNotes: e.target.value})}
-                      className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none h-20 resize-none"
-                      placeholder="Explain extra costs, driver details, or receipt exceptions..."
-                    />
-                  </div>
                 </div>
 
+                {/* Logistics Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Origin Country/Port</label>
+                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Origin</label>
                     <input value={editingShipmentValues.origin || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, origin: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
                   </div>
                   <div className="space-y-2">
@@ -1299,68 +1315,13 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <input value={editingShipmentValues.destination || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, destination: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Port of Loading (POL)</label>
-                    <input value={editingShipmentValues.pol || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, pol: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Port of Discharge (POD)</label>
-                    <input value={editingShipmentValues.pod || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, pod: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Mode</label>
-                    <select value={editingShipmentValues.shipmentMode || 'Sea'} onChange={e => setEditingShipmentValues({...editingShipmentValues, shipmentMode: e.target.value as any})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none">
-                      <option value="Sea" className="bg-[#0f172a]">Sea</option>
-                      <option value="Land" className="bg-[#0f172a]">Land</option>
-                      <option value="Air" className="bg-[#0f172a]">Air</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Type</label>
-                    <select value={editingShipmentValues.shipmentType || 'FCL'} onChange={e => setEditingShipmentValues({...editingShipmentValues, shipmentType: e.target.value as any})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none">
-                      <option value="FCL" className="bg-[#0f172a]">FCL</option>
-                      <option value="LCL" className="bg-[#0f172a]">LCL</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Container Type</label>
-                    <select value={editingShipmentValues.containerType || 'Dry'} onChange={e => setEditingShipmentValues({...editingShipmentValues, containerType: e.target.value as any})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none">
-                      {['Dry', 'Reefer', 'Open Top', 'Flat Rack', 'High Cube'].map(t => <option key={t} value={t} className="bg-[#0f172a]">{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Container Size</label>
-                    <select value={editingShipmentValues.containerSize || '40’'} onChange={e => setEditingShipmentValues({...editingShipmentValues, containerSize: e.target.value as any})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none">
-                      <option value="20’" className="bg-[#0f172a]">20’</option>
-                      <option value="40’" className="bg-[#0f172a]">40’</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Place of Loading</label>
-                    <input value={editingShipmentValues.placeOfLoading || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, placeOfLoading: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Loading Date</label>
-                    <input type="date" value={editingShipmentValues.loadingDate || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, loadingDate: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
-                  </div>
-                  <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Weight (kg)</label>
-                    <input type="number" value={editingShipmentValues.weightKg || 0} onChange={e => setEditingShipmentValues({...editingShipmentValues, weightKg: parseFloat(e.target.value)})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" placeholder="e.g. 25000" />
+                    <input type="number" value={editingShipmentValues.weightKg || 0} onChange={e => setEditingShipmentValues({...editingShipmentValues, weightKg: parseFloat(e.target.value)})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">ETA</label>
                     <input type="date" value={editingShipmentValues.eta || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, eta: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Current Geo-Location</label>
-                  <input value={editingShipmentValues.currentLocation || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, currentLocation: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" placeholder="e.g. Suez Canal / On-Board Vessel" />
                 </div>
 
                 <div className="space-y-2">
@@ -1370,33 +1331,7 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       value={editingShipmentValues.cargoDescription || ''} 
                       onChange={e => setEditingShipmentValues({...editingShipmentValues, cargoDescription: e.target.value})}
                       className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none h-32 resize-none focus:border-blue-500 transition-all"
-                      placeholder="Enter detailed manifest description, package count, and HS codes..."
                     />
-                </div>
-
-                <div className="border-t border-slate-800 pt-8 space-y-6">
-                  <div className="flex items-center gap-3 text-blue-500 font-black text-[10px] uppercase tracking-widest">
-                    <i className="fas fa-file-shield"></i> Customs Clearance Desk
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Customs Broker</label>
-                      <input value={editingShipmentValues.customsBroker || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, customsBroker: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none" placeholder="Enter broker name..." />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Declaration ID</label>
-                      <input value={editingShipmentValues.customsDeclarationNumber || ''} onChange={e => setEditingShipmentValues({...editingShipmentValues, customsDeclarationNumber: e.target.value})} className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none font-mono" placeholder="Customs ID..." />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Internal Customs Notes</label>
-                    <textarea 
-                      value={editingShipmentValues.customsNotes || ''} 
-                      onChange={e => setEditingShipmentValues({...editingShipmentValues, customsNotes: e.target.value})}
-                      className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white outline-none h-20 resize-none"
-                      placeholder="Input regulatory notes, inspection outcomes, or fine warnings..."
-                    />
-                  </div>
                 </div>
 
                 <button type="submit" className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-2xl active:scale-95">
@@ -1407,349 +1342,24 @@ const ArbCRM: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Shipment Detail View Modal (Full Details) */}
-        {selectedShipment && !isEditingShipment && (
-          <div className="fixed inset-0 z-[150] bg-[#020617]/90 backdrop-blur-2xl flex items-center justify-center p-6 overflow-y-auto" onClick={() => setSelectedShipment(null)}>
-             <div className="bg-[#0f172a] w-full max-w-6xl rounded-[3rem] border border-slate-800 p-12 relative my-auto shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
-                <header className="flex justify-between items-start mb-12">
-                   <div className="flex items-center gap-8">
-                      <div className="w-24 h-24 rounded-3xl bg-blue-600 flex items-center justify-center text-white text-5xl shadow-2xl">
-                         <i className={`fas ${selectedShipment.shipmentMode === 'Sea' ? 'fa-ship' : selectedShipment.shipmentMode === 'Air' ? 'fa-plane' : 'fa-truck'}`}></i>
-                      </div>
-                      <div>
-                         <h3 className="text-5xl font-black text-white tracking-tighter mb-4 leading-none">{selectedShipment.trackingNumber}</h3>
-                         <div className="flex flex-wrap items-center gap-6">
-                            <span className="text-slate-500 font-black text-xs uppercase tracking-widest">Client: <span className="text-slate-200">{selectedShipment.customerName}</span></span>
-                            <InteractiveShipmentStatusBadge status={selectedShipment.status} onChange={s => handleUpdateShipmentStatus(selectedShipment.id, s)} />
-                            <span className="text-[10px] font-black px-3 py-1 rounded-full bg-slate-800 text-slate-400 uppercase tracking-widest">{selectedShipment.shipmentDirection} Ops</span>
-                         </div>
-                      </div>
-                   </div>
-                   <div className="flex gap-4">
-                      <button 
-                         onClick={() => { setIsEditingShipment(true); setEditingShipmentValues(selectedShipment); }}
-                         className="w-14 h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center shadow-lg"
-                         title="Edit Shipment"
-                      >
-                         <i className="fas fa-pencil text-lg"></i>
-                      </button>
-                      <button onClick={() => setSelectedShipment(null)} className="w-14 h-14 rounded-2xl bg-slate-800/50 text-slate-500 hover:text-red-500 transition-all flex items-center justify-center">
-                         <i className="fas fa-times text-xl"></i>
-                      </button>
-                   </div>
-                </header>
-
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                   {/* Left Column: Comprehensive Logistics Stats */}
-                   <div className="lg:col-span-3 space-y-8">
-                      {/* Timeline */}
-                      <div className="bg-slate-900/50 p-10 rounded-[2.5rem] border border-slate-800">
-                         <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-10">Live Freight Lifecycle</h4>
-                         {renderStatusTimeline(selectedShipment.status)}
-                      </div>
-
-                      {/* Detail Grids */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* 1. Core Documentation */}
-                        <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
-                           <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                              <i className="fas fa-file-invoice text-blue-500"></i> Core Documentation
-                           </h4>
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Booking Date</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.bookingDate || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Booking #</span>
-                                <span className="text-blue-400 font-mono font-black">{selectedShipment.bookingNumber || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">B/L Number</span>
-                                <span className="text-blue-400 font-mono font-black">{selectedShipment.blNumber || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Shipping Line</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.shippingLine}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Shipment Mode</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.shipmentMode}</span>
-                              </div>
-                           </div>
-                        </div>
-
-                        {/* 2. Technical Specifications */}
-                        <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
-                           <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                              <i className="fas fa-cubes text-blue-500"></i> Payload & Equipment
-                           </h4>
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Shipment Type</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.shipmentType}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Container Size</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.containerSize}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Container Type</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.containerType}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Weight (kg)</span>
-                                <span className="text-emerald-400 font-black">{selectedShipment.weightKg ? `${selectedShipment.weightKg.toLocaleString()} kg` : '---'}</span>
-                              </div>
-                           </div>
-                        </div>
-                      </div>
-
-                      {/* 3. Inland Transportation Cost Details */}
-                      <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800 border-l-4 border-l-emerald-500 shadow-xl">
-                        <div className="flex justify-between items-center mb-8">
-                           <h4 className="text-[11px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-3">
-                              <i className="fas fa-money-bill-transfer"></i> Inland Transportation Cost Details
-                           </h4>
-                           <div className="bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/20">
-                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block leading-none mb-1">Total Inland Cost</span>
-                             <span className="text-lg font-black text-emerald-400">
-                                {selectedShipment.currency === 'USD' ? '$' : 'EGP'}
-                                {((selectedShipment.inlandFreight || 0) + 
-                                  (selectedShipment.gensetCost || 0) + 
-                                  (selectedShipment.officialReceipts || 0) + 
-                                  (selectedShipment.overnightStay || 0) + 
-                                  (selectedShipment.otherExpenses || 0)).toLocaleString()}
-                             </span>
-                           </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold flex items-center gap-2"><i className="fas fa-truck-moving text-[10px]"></i> Freight Cost</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.inlandFreight?.toLocaleString() || '0'} {selectedShipment.currency}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold flex items-center gap-2"><i className="fas fa-bolt text-[10px]"></i> Genset Cost</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.gensetCost?.toLocaleString() || '0'} {selectedShipment.currency}</span>
-                              </div>
-                           </div>
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold flex items-center gap-2"><i className="fas fa-receipt text-[10px]"></i> Official Receipts</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.officialReceipts?.toLocaleString() || '0'} {selectedShipment.currency}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold flex items-center gap-2"><i className="fas fa-bed text-[10px]"></i> Overnight Stay</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.overnightStay?.toLocaleString() || '0'} {selectedShipment.currency}</span>
-                              </div>
-                           </div>
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold flex items-center gap-2"><i className="fas fa-plus-circle text-[10px]"></i> Other Expenses</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.otherExpenses?.toLocaleString() || '0'} {selectedShipment.currency}</span>
-                              </div>
-                           </div>
-                        </div>
-                        {selectedShipment.otherExpensesNotes && (
-                           <div className="mt-6 pt-6 border-t border-slate-800">
-                             <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest block mb-2">Cost Breakdown & Logistics Notes</span>
-                             <p className="text-xs text-slate-400 italic leading-relaxed">"{selectedShipment.otherExpensesNotes}"</p>
-                           </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* 4. Routing & Port Context */}
-                        <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
-                           <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                              <i className="fas fa-map-marked-alt text-blue-500"></i> Route & Port Ops
-                           </h4>
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Origin</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.origin}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Port of Loading (POL)</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.pol || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Port of Discharge (POD)</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.pod || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Destination</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.destination}</span>
-                              </div>
-                           </div>
-                        </div>
-
-                        {/* 5. Scheduling & Positioning */}
-                        <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
-                           <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                              <i className="fas fa-calendar-check text-blue-500"></i> Schedule & Positioning
-                           </h4>
-                           <div className="space-y-4">
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Loading Date</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.loadingDate || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Place of Loading</span>
-                                <span className="text-slate-200 font-black">{selectedShipment.placeOfLoading || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Est. Arrival (ETA)</span>
-                                <span className="text-blue-400 font-black">{selectedShipment.eta || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-slate-500 font-bold">Current Location</span>
-                                <span className="text-amber-400 font-black">{selectedShipment.currentLocation || 'In Transit'}</span>
-                              </div>
-                           </div>
-                        </div>
-                      </div>
-                      
-                      {/* Document Control Panel */}
-                      <div className="bg-slate-900/50 p-10 rounded-[2.5rem] border border-slate-800">
-                        <div className="flex justify-between items-center mb-8">
-                          <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Customs Document Verification</h4>
-                          <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">Operational Checklist</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                           {(selectedShipment.documents || []).map(doc => (
-                             <button 
-                                key={doc.id}
-                                onClick={() => toggleDocumentStatus(selectedShipment.id, doc.id)}
-                                className={`p-6 rounded-[1.5rem] border-2 transition-all flex flex-col items-center text-center gap-3 active:scale-95 group ${
-                                  doc.status === 'Verified' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                                  doc.status === 'Pending' ? 'bg-amber-500/10 border-amber-500/30' :
-                                  'bg-slate-800/40 border-slate-700/50'
-                                }`}
-                             >
-                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
-                                 doc.status === 'Verified' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' :
-                                 doc.status === 'Pending' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' :
-                                 'bg-slate-700 text-slate-400'
-                               }`}>
-                                 <i className={`fas ${doc.status === 'Verified' ? 'fa-check-double' : doc.status === 'Pending' ? 'fa-clock' : 'fa-file-circle-exclamation'}`}></i>
-                               </div>
-                               <div>
-                                 <div className={`text-[10px] font-black uppercase tracking-tight leading-tight ${doc.status === 'Verified' ? 'text-emerald-400' : 'text-slate-300'}`}>{doc.name}</div>
-                                 <div className="text-[8px] font-black text-slate-500 uppercase mt-1 tracking-widest">{doc.status}</div>
-                               </div>
-                             </button>
-                           ))}
-                        </div>
-                      </div>
-                   </div>
-
-                   {/* Right Column: Supplemental Info */}
-                   <div className="space-y-8">
-                      {/* Cargo Description Block */}
-                      <div className="bg-blue-600/5 p-8 rounded-[2.5rem] border border-blue-500/20">
-                         <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-6">Manifest Content</h4>
-                         <div className="text-sm font-bold text-slate-200 leading-relaxed">
-                            {selectedShipment.cargoDescription || 'Commercial general cargo manifest.'}
-                         </div>
-                      </div>
-
-                      {/* Customs Snapshot */}
-                      <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
-                         <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6 flex items-center gap-3">
-                            <i className="fas fa-file-shield text-blue-500"></i> Customs State
-                         </h4>
-                         <div className="space-y-4">
-                            <div className="flex flex-col gap-1">
-                               <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Brokerage Asset</span>
-                               <span className="text-xs font-black text-white">{selectedShipment.customsBroker || 'Unassigned'}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                               <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Clearance Desk Stage</span>
-                               <span className={`px-3 py-1.5 w-fit rounded-lg text-[10px] font-black uppercase tracking-widest border ${getDetailedCustomsStyle(selectedShipment.detailedCustomsStatus || 'Not Started')}`}>
-                                 {selectedShipment.detailedCustomsStatus || 'Not Started'}
-                               </span>
-                            </div>
-                            {selectedShipment.customsNotes && (
-                              <div className="pt-4 border-t border-slate-800">
-                                <span className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Compliance Notes</span>
-                                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed italic">"{selectedShipment.customsNotes}"</p>
-                              </div>
-                            )}
-                         </div>
-                      </div>
-
-                      {/* Sales Ownership */}
-                      <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800">
-                         <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Ops Ownership</h4>
-                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-500">
-                               <i className="fas fa-id-badge"></i>
-                            </div>
-                            <div>
-                               <div className="text-xs font-black text-white">{selectedShipment.salesRep}</div>
-                               <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest leading-none">Senior Logistics Asset</div>
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-                </div>
-             </div>
-          </div>
-        )}
-
-        {/* AI Import Modal */}
+        {/* AI Parser Modal */}
         {isSmartImportOpen && (
           <div className="fixed inset-0 z-[180] bg-[#020617]/95 flex items-center justify-center p-6 backdrop-blur-xl">
              <div className="bg-[#0f172a] w-full max-w-2xl rounded-[3rem] border border-slate-800 p-12 shadow-2xl animate-scale-in">
-                <div className="flex justify-between items-center mb-10">
-                   <h3 className="text-3xl font-black text-white uppercase tracking-tighter">AI Logistics Parser</h3>
-                   <button onClick={() => setIsSmartImportOpen(false)} className="text-slate-500 hover:text-white transition-colors"><i className="fas fa-times text-2xl"></i></button>
-                </div>
                 <textarea 
-                   className="w-full h-64 bg-[#020617] border border-slate-800 rounded-3xl p-8 text-blue-400 font-mono text-sm outline-none"
-                   placeholder="PASTE FREIGHT DATA STREAM..."
+                   className="w-full h-64 bg-[#020617] border border-slate-800 rounded-3xl p-8 text-blue-400 font-mono text-sm outline-none mb-6"
+                   placeholder="PASTE LOGISTICS TEXT STREAM HERE (Emails, Invoices, etc)..."
                    value={importText}
                    onChange={e => setImportText(e.target.value)}
                 />
-                <button onClick={handleSmartImport} disabled={isParsing} className="w-full mt-10 bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-widest transition-all">
-                  {isParsing ? 'PARSING DATA...' : 'EXECUTE AI SCAN'}
+                <button onClick={handleSmartImport} disabled={isParsing} className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-widest transition-all">
+                  {isParsing ? 'ANALYZING...' : 'RUN AI PARSE'}
                 </button>
+                <button onClick={() => setIsSmartImportOpen(false)} className="w-full mt-4 text-[10px] text-slate-600 uppercase font-black">Cancel</button>
              </div>
           </div>
         )}
 
-        {/* Asset Registration Modal */}
-        {isAddingRep && (
-          <div className="fixed inset-0 z-[180] bg-[#020617]/95 flex items-center justify-center p-6 backdrop-blur-xl overflow-y-auto">
-            <div className="bg-[#0f172a] w-full max-w-md rounded-[2.5rem] border border-slate-800 p-10 shadow-2xl my-auto animate-scale-in">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">New Asset Registration</h3>
-                <button onClick={() => setIsAddingRep(false)} className="text-slate-500 hover:text-white transition-colors"><i className="fas fa-times text-xl"></i></button>
-              </div>
-              <form onSubmit={handleAddRep} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Asset Legal Name</label>
-                  <input 
-                    required 
-                    autoFocus
-                    placeholder="e.g. MOHAMED"
-                    value={newRepName} 
-                    onChange={e => setNewRepName(e.target.value)} 
-                    className="w-full bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-white uppercase outline-none focus:border-blue-500 transition-all font-black tracking-widest" 
-                  />
-                </div>
-                <div className="p-4 bg-blue-600/5 border border-blue-500/20 rounded-xl">
-                  <p className="text-[9px] text-blue-400 font-black uppercase leading-relaxed text-center">Registering this asset will make it available across all operational registries and filters.</p>
-                </div>
-                <button type="submit" className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95">
-                  Authorize Asset Entry
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
       </main>
 
       <style>{`

@@ -67,12 +67,17 @@ export const parseLogisticsText = async (text: string, context: { salesReps: str
     3. If no shipping line is found, set the shippingLine.value to null.
     4. ALLOWED LIST: ${OFFICIAL_SHIPPING_LINES.join(', ')}
 
+    FINANCIAL EXTRACTION RULES:
+    1. Extract inland freight cost.
+    2. Extract "Genset" related costs as gensetCost.
+    3. Extract "Official Receipts" or "Government Fees" as officialReceipts.
+    4. Extract "Overnight" or "Driver Stay" fees as overnightStay.
+    5. Extract any other miscellaneous fees as otherExpenses.
+
     OTHER RULES:
     1. Dates MUST be YYYY-MM-DD.
     2. Currency MUST be USD or EGP.
-    3. ShipmentMode MUST be Sea, Land, or Air.
-    4. Extract the Bill of Lading (B/L) number if present.
-    5. If any other value not found, use null.
+    3. Extract the Bill of Lading (B/L) number if present.
   `;
 
   const response = await ai.models.generateContent({
@@ -86,13 +91,13 @@ export const parseLogisticsText = async (text: string, context: { salesReps: str
         properties: {
           customerName: { type: Type.STRING },
           trackingNumber: { type: Type.STRING },
-          blNumber: { type: Type.STRING, description: "Bill of Lading / B/L Number" },
+          blNumber: { type: Type.STRING },
           shippingLine: { 
             type: Type.OBJECT,
             properties: {
-                value: { type: Type.STRING, description: "The normalized name from the allowed list" },
-                confidence: { type: Type.NUMBER, description: "Score from 0 to 1" },
-                originalTextDetected: { type: Type.STRING, description: "Exact text from source" }
+                value: { type: Type.STRING },
+                confidence: { type: Type.NUMBER },
+                originalTextDetected: { type: Type.STRING }
             },
             required: ["value", "confidence", "originalTextDetected"]
           },
@@ -101,9 +106,13 @@ export const parseLogisticsText = async (text: string, context: { salesReps: str
           cargoDescription: { type: Type.STRING },
           salesRep: { type: Type.STRING },
           inlandFreight: { type: Type.NUMBER },
+          gensetCost: { type: Type.NUMBER },
+          officialReceipts: { type: Type.NUMBER },
+          overnightStay: { type: Type.NUMBER },
+          otherExpenses: { type: Type.NUMBER },
           currency: { type: Type.STRING },
           eta: { type: Type.STRING },
-          weightKg: { type: Type.NUMBER, description: "Gross weight in Kilograms" }
+          weightKg: { type: Type.NUMBER }
         }
       }
     },
