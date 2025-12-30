@@ -1,15 +1,68 @@
-
 import React, { useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
 import Footer from './components/Footer';
 import FAQSection from './components/FAQSection';
 import ArbCRM from './components/ArbCRM';
 import CustomsSection from './components/CustomsSection';
+import { Shipment, Lead } from './types';
 
 function App() {
   const [showCRM, setShowCRM] = useState(false);
+
+  // Initialize mock data if nothing exists
+  useEffect(() => {
+    if (!localStorage.getItem('amz_shipments')) {
+      const mockShipments: Shipment[] = [
+        {
+          id: '1',
+          trackingNumber: 'AMZ-4921',
+          customerName: 'Global Trade Co.',
+          bookingDate: '2024-03-01',
+          bookingNumber: 'BK-1029',
+          blNumber: 'BL-99201',
+          shippingLine: 'CMA',
+          shipmentMode: 'Sea',
+          shipmentType: 'FCL',
+          shipmentDirection: 'Export',
+          containerType: 'Dry',
+          containerSize: '40’',
+          placeOfLoading: 'Alexandria',
+          pol: 'Alexandria',
+          pod: 'Antwerp',
+          cargoDescription: 'Frozen Vegetables',
+          loadingDate: '2024-03-02',
+          currentLocation: 'At Sea',
+          status: 'At Sea',
+          origin: 'Egypt',
+          destination: 'Belgium',
+          shippingDate: '2024-03-03',
+          eta: '2024-03-15',
+          salesRep: 'RASHA',
+          currency: 'USD',
+          documents: []
+        }
+      ];
+      localStorage.setItem('amz_shipments', JSON.stringify(mockShipments));
+    }
+    if (!localStorage.getItem('amz_leads')) {
+      const mockLeads: Lead[] = [
+        {
+          id: '1',
+          name: 'Ahmed Yassin',
+          phone: '+201012345678',
+          cargoType: 'Industrial Machines',
+          route: 'Cairo -> Dubai',
+          status: 'New',
+          date: '2024-03-04',
+          salesName: 'C.MOSTAFA'
+        }
+      ];
+      localStorage.setItem('amz_leads', JSON.stringify(mockLeads));
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col font-inter">
@@ -54,7 +107,7 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch">
-              {/* Right Column (Chatbot - shifted to left for English) */}
+              {/* Chatbot Column */}
               <div className="space-y-8">
                 <div className="bg-white p-8 rounded-2xl shadow-lg border-l-4 border-blue-600 h-full">
                   <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -68,7 +121,7 @@ function App() {
                 </div>
               </div>
 
-              {/* Left Column (Highlights - shifted to right for English) */}
+              {/* Highlights Column */}
               <div className="flex flex-col gap-6">
                 <div className="bg-white p-8 rounded-2xl shadow-lg border-r-4 border-slate-900 flex-1 flex flex-col justify-center">
                   <h3 className="text-2xl font-bold mb-6 text-slate-900 flex items-center gap-3">
