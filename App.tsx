@@ -1,4 +1,5 @@
-
+import React, { useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
@@ -240,6 +241,8 @@ function App() {
           <i className="fab fa-whatsapp text-3xl"></i>
         </a>
       </div>
+
+      <Analytics />
     </div>
   );
 }
